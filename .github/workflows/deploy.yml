@@ -1,0 +1,40 @@
+name: Build & Deploy HEXAGAME (Web)
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout (this play repo)
+        uses: actions/checkout@v4
+      - name: Build Web export
+        env:
+          SRC_TOKEN: ${{ secrets.SRC_TOKEN }}
+        run: bash ci/build.sh
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact (dist)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
