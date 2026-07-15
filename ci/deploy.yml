@@ -1,0 +1,48 @@
+name: Build & Deploy HEXAGAME (Web)
+
+# ゲーム本体 genova699/HEXAGAME の最新 main を取得して Web 書き出し → GitHub Pages へ公開する。
+# - push          : このリポジトリ(build.sh 等)を更新したら再ビルド／初回貼り付け時も走る
+# - schedule      : 毎時、本体の変更を取り込んで自動追随（他の人が本体を更新しても反映される）
+# - workflow_dispatch : Actions 画面の「Run workflow」で即時ビルド
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 * * * *'   # 毎時 17 分（UTC）。誰かが本体を更新しても最大1時間で自動反映
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout (this play repo)
+        uses: actions/checkout@v4
+
+      - name: Build Web export
+        env:
+          SRC_TOKEN: ${{ secrets.SRC_TOKEN }}   # genova699/HEXAGAME(private) 読み取り用
+        run: bash ci/build.sh
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact (dist)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
